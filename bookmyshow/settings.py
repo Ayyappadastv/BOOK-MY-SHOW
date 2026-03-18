@@ -67,13 +67,20 @@ DATABASES = {
 
 # Vercel Serverless Read-Only Filesystem Fix
 if os.environ.get('VERCEL') == '1' or os.environ.get('VERCEL_ENV'):
+    import stat
     tmp_db_path = Path('/tmp/db.sqlite3')
     if not tmp_db_path.exists():
         original_db = BASE_DIR / 'db.sqlite3'
         if original_db.exists():
-            shutil.copy2(original_db, tmp_db_path)
+            # Use copyfile to avoid copying read-only metadata modes
+            shutil.copyfile(original_db, tmp_db_path)
+            # Force write permissions
+            os.chmod(tmp_db_path, stat.S_IREAD | stat.S_IWRITE)
     
     DATABASES['default']['NAME'] = tmp_db_path
+    
+    # Use cookie-based sessions so logins survive across Vercel's ephemeral instances
+    SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
 
 AUTH_USER_MODEL = 'accounts.User'
 
