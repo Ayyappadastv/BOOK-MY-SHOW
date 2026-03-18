@@ -135,17 +135,11 @@ LOGGING = {
         'verbose': {'format': '{levelname} {asctime} {module} {message}', 'style': '{'},
     },
     'handlers': {
-        'file': {
-            'level': 'WARNING',
-            'class': 'logging.FileHandler',
-            'filename': BASE_DIR / 'logs/bookmyshow.log',
-            'formatter': 'verbose',
-        },
         'console': {'class': 'logging.StreamHandler', 'formatter': 'verbose'},
     },
     'loggers': {
         'django': {'handlers': ['console'], 'level': 'INFO'},
-        'movies': {'handlers': ['file', 'console'], 'level': 'WARNING', 'propagate': False},
-        'email_tasks': {'handlers': ['file', 'console'], 'level': 'WARNING', 'propagate': False},
+        'movies': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
+        'email_tasks': {'handlers': ['console'], 'level': 'WARNING', 'propagate': False},
     },
 }
