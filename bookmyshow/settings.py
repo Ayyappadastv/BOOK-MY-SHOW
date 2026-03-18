@@ -56,12 +56,24 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'bookmyshow.wsgi.application'
 
+import shutil
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': BASE_DIR / 'db.sqlite3',
     }
 }
+
+# Vercel Serverless Read-Only Filesystem Fix
+if os.environ.get('VERCEL') == '1' or os.environ.get('VERCEL_ENV'):
+    tmp_db_path = Path('/tmp/db.sqlite3')
+    if not tmp_db_path.exists():
+        original_db = BASE_DIR / 'db.sqlite3'
+        if original_db.exists():
+            shutil.copy2(original_db, tmp_db_path)
+    
+    DATABASES['default']['NAME'] = tmp_db_path
 
 AUTH_USER_MODEL = 'accounts.User'
 
