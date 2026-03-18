@@ -81,6 +81,16 @@ if os.environ.get('VERCEL') == '1' or os.environ.get('VERCEL_ENV'):
     
     # Use cookie-based sessions so logins survive across Vercel's ephemeral instances
     SESSION_ENGINE = 'django.contrib.sessions.backends.signed_cookies'
+    
+    # Bypass Redis on Vercel
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+            'LOCATION': 'vercel-cache',
+        }
+    }
+    CELERY_TASK_ALWAYS_EAGER = True
+    CELERY_TASK_STORE_EAGER_RESULT = True
 
 AUTH_USER_MODEL = 'accounts.User'
 
