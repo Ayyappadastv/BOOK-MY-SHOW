@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Booking Confirmed – BookMyShow</title>
+</head>
+<body style="margin:0;padding:0;background:#0f172a;font-family:'Inter',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" bgcolor="#0f172a">
+    <tr>
+      <td align="center" style="padding:40px 20px;">
+        <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#1e293b;border-radius:16px;overflow:hidden;">
+          <!-- Header -->
+          <tr>
+            <td style="background:linear-gradient(135deg,#6366f1,#8b5cf6);padding:32px;text-align:center;">
+              <h1 style="margin:0;color:#fff;font-size:28px;font-weight:800;">🎬 BookMyShow</h1>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.8);font-size:14px;">Your ticket to an amazing experience</p>
+            </td>
+          </tr>
+          <!-- Success Badge -->
+          <tr>
+            <td style="padding:32px;text-align:center;background:#1e293b;">
+              <div style="display:inline-block;background:#10b981;border-radius:50%;width:72px;height:72px;line-height:72px;font-size:36px;margin-bottom:16px;">✓</div>
+              <h2 style="color:#ffffff;margin:0 0 8px;font-size:24px;">Booking Confirmed!</h2>
+              <p style="color:#94a3b8;margin:0;font-size:15px;">Thank you, {{ user.first_name|default:user.username }}! Your seats are locked in.</p>
+            </td>
+          </tr>
+          <!-- Booking Details -->
+          <tr>
+            <td style="padding:0 32px 32px;">
+              <table width="100%" cellpadding="0" cellspacing="0" style="background:#0f172a;border-radius:12px;overflow:hidden;">
+                <tr><td style="padding:20px;border-bottom:1px solid #1e293b;">
+                  <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Movie</p>
+                  <p style="margin:0;color:#ffffff;font-size:18px;font-weight:700;">{{ movie.title }}</p>
+                </td></tr>
+                <tr><td style="padding:20px;border-bottom:1px solid #1e293b;">
+                  <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Theater</p>
+                  <p style="margin:0;color:#ffffff;font-size:15px;">{{ theater.name }}</p>
+                  <p style="margin:4px 0 0;color:#94a3b8;font-size:13px;">{{ theater.city }} — {{ show.screen.name }}</p>
+                </td></tr>
+                <tr><td style="padding:20px;border-bottom:1px solid #1e293b;">
+                  <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Date & Time</p>
+                  <p style="margin:0;color:#ffffff;font-size:15px;">{{ show.start_time|date:"D, d M Y, g:i A" }}</p>
+                </td></tr>
+                <tr><td style="padding:20px;border-bottom:1px solid #1e293b;">
+                  <p style="margin:0 0 8px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Seats</p>
+                  <div>{% for seat in seats %}
+                    <span style="display:inline-block;background:#6366f1;color:#fff;border-radius:6px;padding:4px 10px;margin:2px;font-size:13px;font-weight:600;">{{ seat.row }}{{ seat.number }}</span>
+                  {% endfor %}</div>
+                </td></tr>
+                <tr><td style="padding:20px;border-bottom:1px solid #1e293b;">
+                  <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Booking ID</p>
+                  <p style="margin:0;color:#ffffff;font-family:monospace;font-size:14px;">#{{ booking.id }}</p>
+                </td></tr>
+                {% if payment %}
+                <tr><td style="padding:20px;border-bottom:1px solid #1e293b;">
+                  <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Payment ID</p>
+                  <p style="margin:0;color:#ffffff;font-family:monospace;font-size:13px;">{{ payment.razorpay_payment_id }}</p>
+                </td></tr>
+                {% endif %}
+                <tr><td style="padding:20px;">
+                  <p style="margin:0 0 4px;color:#94a3b8;font-size:12px;text-transform:uppercase;letter-spacing:1px;">Amount Paid</p>
+                  <p style="margin:0;color:#10b981;font-size:24px;font-weight:800;">₹{{ booking.total_amount|floatformat:0 }}</p>
+                </td></tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="padding:24px;text-align:center;background:#0f172a;border-top:1px solid #1e293b;">
+              <p style="margin:0;color:#64748b;font-size:12px;">This is an automated email. Please do not reply.</p>
+              <p style="margin:8px 0 0;color:#64748b;font-size:12px;">© 2025 BookMyShow. All rights reserved.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

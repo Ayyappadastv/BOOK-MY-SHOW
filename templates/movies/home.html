@@ -1,0 +1,167 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load movie_filters %}
+{% block title %}Book Tickets – BookMyShow{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section">
+  <div class="container">
+    <div class="hero-content text-center">
+      <h1 class="hero-title">Book Your <span class="gradient-text">Perfect Experience</span></h1>
+      <p class="hero-subtitle">Movies, concerts, events — all in one place</p>
+      <form method="get" action="{% url 'movies:home' %}" class="search-bar-wrapper">
+        <div class="search-bar">
+          <i class="bi bi-search search-icon"></i>
+          <input type="text" name="q" value="{{ search_q }}" placeholder="Search movies..." class="search-input" id="searchInput">
+          <button type="submit" class="btn btn-primary search-btn">Search</button>
+        </div>
+      </form>
+    </div>
+  </div>
+</section>
+
+<div class="container py-5">
+  <div class="row g-4">
+    <!-- Sidebar Filters -->
+    <div class="col-lg-3">
+      <form method="get" id="filterForm" action="{% url 'movies:home' %}">
+        {% if search_q %}<input type="hidden" name="q" value="{{ search_q }}">{% endif %}
+        {% if sort %}<input type="hidden" name="sort" value="{{ sort }}">{% endif %}
+
+        <div class="filter-sidebar">
+          <div class="filter-header">
+            <h5>Filters</h5>
+            {% if selected_genres or selected_languages %}
+            <a href="{% url 'movies:home' %}" class="clear-filters">Clear All</a>
+            {% endif %}
+          </div>
+
+          <!-- Genre Filter -->
+          <div class="filter-section">
+            <p class="filter-title">Genre</p>
+            {% for genre in genres %}
+            <label class="filter-item">
+              <input type="checkbox" name="genre" value="{{ genre.slug }}" class="filter-check"
+                     {% if genre.slug in selected_genres %}checked{% endif %}
+                     onchange="document.getElementById('filterForm').submit()">
+              <span class="filter-label">{{ genre.name }}</span>
+              <span class="filter-count">{{ genre_count_map|dict_get:genre.slug }}</span>
+            </label>
+            {% endfor %}
+          </div>
+
+          <!-- Language Filter -->
+          <div class="filter-section">
+            <p class="filter-title">Language</p>
+            {% for lang in languages %}
+            <label class="filter-item">
+              <input type="checkbox" name="language" value="{{ lang.name }}" class="filter-check"
+                     {% if lang.name in selected_languages %}checked{% endif %}
+                     onchange="document.getElementById('filterForm').submit()">
+              <span class="filter-label">{{ lang.name }}</span>
+              <span class="filter-count">{{ lang_count_map|dict_get:lang.name }}</span>
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <!-- Movie Grid -->
+    <div class="col-lg-9">
+      <!-- Grid Header -->
+      <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div class="results-meta">
+          <span class="results-count">{{ page_obj.paginator.count }} movies found</span>
+          {% if selected_genres or selected_languages or search_q %}
+          <span class="badge bg-primary rounded-pill px-3">Filtered</span>
+          {% endif %}
+        </div>
+        
+        <div class="sort-wrapper">
+          <select name="sort" class="form-select sort-select" onchange="window.location.href='?'+new URLSearchParams({...Object.fromEntries(new URLSearchParams(window.location.search)), sort: this.value}).toString()">
+            <option value="-release_date" {% if sort == '-release_date' %}selected{% endif %}>Newest First</option>
+            <option value="release_date" {% if sort == 'release_date' %}selected{% endif %}>Oldest First</option>
+            <option value="title" {% if sort == 'title' %}selected{% endif %}>Title A-Z</option>
+            <option value="-rating" {% if sort == '-rating' %}selected{% endif %}>Top Rated</option>
+          </select>
+        </div>
+      </div>
+
+      {% if page_obj %}
+      <div class="row g-4">
+        {% for movie in page_obj %}
+        <div class="col-sm-6 col-md-4 col-xl-3">
+          <div class="movie-card">
+            <a href="{% url 'movies:movie_detail' movie.pk %}" class="movie-card-link">
+              <div class="movie-poster-wrap">
+                {% if movie.poster %}
+                <img src="{{ movie.poster.url }}" alt="{{ movie.title }}" class="movie-poster" loading="lazy">
+                {% else %}
+                <div class="movie-poster-placeholder">
+                  <i class="bi bi-film"></i>
+                </div>
+                {% endif %}
+                <span class="movie-rating-badge">{{ movie.rating }}</span>
+                <div class="movie-overlay">
+                  <span class="book-now-btn">Book Now <i class="bi bi-arrow-right"></i></span>
+                </div>
+              </div>
+              <div class="movie-info">
+                <h6 class="movie-title">{{ movie.title }}</h6>
+                <div class="movie-meta">
+                  <span><i class="bi bi-clock"></i> {{ movie.duration_minutes }} min</span>
+                  <span>{{ movie.release_date|date:"M Y" }}</span>
+                </div>
+                <div class="movie-genres">
+                  {% for genre in movie.genres.all|slice:":2" %}
+                  <span class="genre-tag">{{ genre.name }}</span>
+                  {% endfor %}
+                </div>
+              </div>
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Pagination -->
+      {% if is_paginated %}
+      <nav class="mt-5 d-flex justify-content-center">
+        <ul class="pagination">
+          {% if page_obj.has_previous %}
+          <li class="page-item">
+            <a class="page-link" href="?{% if window_location_search %}{{ window_location_search }}&{% endif %}page={{ page_obj.previous_page_number }}"><i class="bi bi-chevron-left"></i></a>
+          </li>
+          {% endif %}
+
+          {% for num in page_obj.paginator.page_range %}
+          {% if page_obj.number == num %}
+          <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+          {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+          <li class="page-item"><a class="page-link" href="?{% if window_location_search %}{{ window_location_search }}&{% endif %}page={{ num }}">{{ num }}</a></li>
+          {% endif %}
+          {% endfor %}
+
+          {% if page_obj.has_next %}
+          <li class="page-item">
+            <a class="page-link" href="?{% if window_location_search %}{{ window_location_search }}&{% endif %}page={{ page_obj.next_page_number }}"><i class="bi bi-chevron-right"></i></a>
+          </li>
+          {% endif %}
+        </ul>
+      </nav>
+      {% endif %}
+
+      {% else %}
+      <div class="empty-state text-center py-5">
+        <i class="bi bi-camera-reels empty-icon"></i>
+        <h3>No movies matches your criteria</h3>
+        <p class="text-muted">Try clearing some filters or searching for something else.</p>
+        <a href="{% url 'movies:home' %}" class="btn btn-primary mt-3">Reset All Filters</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}

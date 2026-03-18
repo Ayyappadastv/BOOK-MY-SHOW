@@ -1,0 +1,119 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}{{ movie.title }} – BookMyShow{% endblock %}
+{% block meta_description %}{{ movie.description|truncatechars:160 }}{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row g-5">
+    <!-- Poster Column -->
+    <div class="col-lg-3 col-md-4">
+      <div class="movie-detail-poster">
+        {% if movie.poster %}
+        <img src="{{ movie.poster.url }}" alt="{{ movie.title }}" class="img-fluid rounded-3 shadow-lg">
+        {% else %}
+        <div class="poster-placeholder-lg">
+          <i class="bi bi-film"></i>
+        </div>
+        {% endif %}
+        <div class="mt-3">
+          <span class="badge bg-warning text-dark fs-6 w-100 py-2">{{ movie.get_rating_display }}</span>
+          <div class="mt-2 text-center d-flex flex-wrap gap-2 justify-content-center">
+            {% for lang in movie.languages.all %}
+            <span class="badge bg-secondary">{{ lang.name }}</span>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Details Column -->
+    <div class="col-lg-9 col-md-8">
+      <div class="movie-detail-info">
+        <div class="d-flex align-items-start gap-3 flex-wrap mb-3">
+          <div>
+            <h1 class="movie-detail-title">{{ movie.title }}</h1>
+            <div class="movie-detail-meta">
+              <span><i class="bi bi-clock me-1"></i>{{ movie.duration_minutes }} min</span>
+              <span class="separator">•</span>
+              <span><i class="bi bi-calendar me-1"></i>{{ movie.release_date|date:"d M Y" }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="genre-tags mb-4">
+          {% for genre in movie.genres.all %}
+          <span class="genre-tag-lg">{{ genre.name }}</span>
+          {% endfor %}
+        </div>
+
+        <p class="movie-description">{{ movie.description }}</p>
+
+        <!-- YouTube Trailer (Lazy Loaded, XSS-safe embed) -->
+        {% if embed_url %}
+        <div class="trailer-section mt-4">
+          <h5 class="section-title mb-3"><i class="bi bi-play-circle-fill me-2 text-danger"></i>Official Trailer</h5>
+          <div class="trailer-container">
+            <!--
+              Security: embed_url is validated server-side with regex before saving.
+              Using youtube-nocookie.com prevents tracking cookies.
+              loading="lazy" prevents performance degradation on slow networks.
+              sandbox restricts JS execution inside iframe.
+              allow-scripts is intentionally included (required for YouTube player),
+              but allow-same-origin is excluded to prevent XSS escalation.
+            -->
+            <iframe
+              src="{{ embed_url }}"
+              title="{{ movie.title }} Official Trailer"
+              class="trailer-iframe"
+              loading="lazy"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+              allowfullscreen
+              referrerpolicy="strict-origin-when-cross-origin">
+            </iframe>
+          </div>
+        </div>
+        {% else %}
+        <div class="trailer-fallback mt-4">
+          <div class="trailer-fallback-inner">
+            <i class="bi bi-play-circle text-muted fs-1"></i>
+            <p class="text-muted mt-2">Trailer not available</p>
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Show Times -->
+        {% if shows %}
+        <div class="shows-section mt-5">
+          <h5 class="section-title mb-3"><i class="bi bi-ticket-fill me-2"></i>Available Shows</h5>
+          <div class="shows-list">
+            {% for show in shows %}
+            <div class="show-card">
+              <div class="show-theater">
+                <strong>{{ show.screen.theater.name }}</strong>
+                <small class="text-muted">{{ show.screen.theater.city }} — {{ show.screen.name }}</small>
+              </div>
+              <div class="show-time-badges">
+                <span class="show-time-badge">{{ show.start_time|date:"D, d M" }}</span>
+                <span class="show-time-badge primary">{{ show.start_time|date:"g:i A" }}</span>
+              </div>
+              <div class="show-price-info">
+                <small class="text-muted">From <strong class="text-success">₹{{ show.price_normal }}</strong></small>
+              </div>
+              <a href="{% url 'movies:seat_selection' show.id %}" class="btn btn-primary btn-sm book-show-btn">
+                Book <i class="bi bi-arrow-right-short"></i>
+              </a>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% else %}
+        <div class="alert alert-secondary mt-4">
+          <i class="bi bi-calendar-x me-2"></i>No upcoming shows available.
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

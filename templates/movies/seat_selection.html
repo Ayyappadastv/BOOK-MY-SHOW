@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Select Seats – {{ show.movie.title }} – BookMyShow{% endblock %}
+
+{% block extra_css %}
+<style>
+  .countdown-bar { background: linear-gradient(90deg, #ef4444, #f97316); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <div class="row">
+    <!-- Seat Map -->
+    <div class="col-lg-8">
+      <div class="seat-map-container">
+        <div class="seat-map-header">
+          <h4><i class="bi bi-camera-reels me-2"></i>{{ show.movie.title }}</h4>
+          <p class="text-muted mb-0">
+            {{ show.screen.theater.name }} · {{ show.screen.name }} ·
+            <strong>{{ show.start_time|date:"D, d M Y · g:i A" }}</strong>
+          </p>
+        </div>
+
+        <!-- Screen indicator -->
+        <div class="screen-indicator">
+          <div class="screen-bar"></div>
+          <small class="text-muted">SCREEN</small>
+        </div>
+
+        <!-- Seat Legend -->
+        <div class="seat-legend">
+          <span class="legend-item"><span class="legend-box available"></span> Available</span>
+          <span class="legend-item"><span class="legend-box selected"></span> Selected</span>
+          <span class="legend-item"><span class="legend-box unavailable"></span> Taken</span>
+          <span class="legend-item"><span class="legend-box premium"></span> Premium</span>
+          <span class="legend-item"><span class="legend-box recliner"></span> Recliner</span>
+        </div>
+
+        <!-- Seat Grid -->
+        <div class="seat-grid" id="seatGrid">
+          {% for row, seats in seats_by_row.items %}
+          <div class="seat-row">
+            <span class="row-label">{{ row }}</span>
+            <div class="seats-in-row">
+              {% for seat in seats %}
+              <button
+                class="seat-btn seat-{{ seat.type }} {% if seat.unavailable %}seat-unavailable{% endif %}"
+                data-seat-id="{{ seat.id }}"
+                data-price="{{ seat.price }}"
+                data-type="{{ seat.type }}"
+                {% if seat.unavailable %}disabled{% endif %}
+                title="{{ row }}{{ seat.number }} ({{ seat.type|capfirst }}) – ₹{{ seat.price }}"
+              >{{ seat.number }}</button>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Booking Summary -->
+    <div class="col-lg-4">
+      <div class="booking-summary sticky-top" style="top: 80px;">
+        <h5 class="mb-3"><i class="bi bi-receipt me-2"></i>Booking Summary</h5>
+
+        <!-- Countdown Timer (shown after seats reserved) -->
+        <div id="countdownSection" class="countdown-section d-none">
+          <p class="countdown-label">⏱ Seats reserved for:</p>
+          <div class="countdown-display" id="countdownDisplay">2:00</div>
+          <div class="progress mt-2" style="height: 4px;">
+            <div class="progress-bar countdown-bar" id="countdownBar" style="width: 100%"></div>
+          </div>
+          <small class="text-muted">Complete payment before time runs out!</small>
+        </div>
+
+        <div id="noSeatsMsg" class="text-muted text-center py-3">
+          <i class="bi bi-cursor fs-4 d-block mb-2"></i>
+          Select seats from the map
+        </div>
+
+        <div id="selectedSeatsList" class="selected-seats-list d-none">
+          <div class="summary-seats" id="summarySeats"></div>
+          <hr>
+          <div class="d-flex justify-content-between fw-bold fs-5">
+            <span>Total</span>
+            <span class="text-success" id="summaryTotal">₹0</span>
+          </div>
+        </div>
+
+        <form id="reserveForm" method="post" action="{% url 'movies:reserve_seats' show.id %}">
+          {% csrf_token %}
+          <div id="seatInputs"></div>
+          <button type="button" id="reserveBtn" class="btn btn-primary w-100 mt-3 d-none"
+                  onclick="reserveSeats()">
+            <i class="bi bi-lock-fill me-2"></i>Reserve & Pay
+          </button>
+        </form>
+
+        <form id="checkoutForm" method="post" action="{% url 'movies:create_order' show.id %}" class="d-none">
+          {% csrf_token %}
+          <div id="checkoutSeatInputs"></div>
+          <button type="submit" id="checkoutBtn" class="btn btn-success w-100 mt-2">
+            <i class="bi bi-credit-card me-2"></i>Proceed to Payment
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  const CSRF_TOKEN = '{{ csrf_token }}';
+  const RESERVE_URL = '{% url "movies:reserve_seats" show.id %}';
+  let selectedSeats = {};
+  let countdownInterval = null;
+  let reservedSeatIds = [];
+
+  // ── Seat Selection ──────────────────────────────────────────────────────────
+  document.querySelectorAll('.seat-btn:not(.seat-unavailable)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.seatId;
+      if (btn.classList.contains('seat-selected')) {
+        btn.classList.remove('seat-selected');
+        delete selectedSeats[id];
+      } else {
+        if (Object.keys(selectedSeats).length >= 10) {
+          alert('You can select a maximum of 10 seats.');
+          return;
+        }
+        btn.classList.add('seat-selected');
+        selectedSeats[id] = { price: parseFloat(btn.dataset.price), type: btn.dataset.type, label: btn.textContent.trim() };
+      }
+      updateSummary();
+    });
+  });
+
+  function updateSummary() {
+    const ids = Object.keys(selectedSeats);
+    const total = ids.reduce((s, id) => s + selectedSeats[id].price, 0);
+    const noMsg = document.getElementById('noSeatsMsg');
+    const list = document.getElementById('selectedSeatsList');
+    const reserveBtn = document.getElementById('reserveBtn');
+    const summarySeats = document.getElementById('summarySeats');
+
+    if (ids.length === 0) {
+      noMsg.classList.remove('d-none');
+      list.classList.add('d-none');
+      reserveBtn.classList.add('d-none');
+    } else {
+      noMsg.classList.add('d-none');
+      list.classList.remove('d-none');
+      reserveBtn.classList.remove('d-none');
+      summarySeats.innerHTML = ids.map(id =>
+        `<div class="summary-seat-row">
+          <span><i class="bi bi-check-circle-fill text-success me-2"></i>Seat ${selectedSeats[id].label} <small class="text-muted">(${selectedSeats[id].type})</small></span>
+          <span>₹${selectedSeats[id].price.toFixed(0)}</span>
+        </div>`
+      ).join('');
+      document.getElementById('summaryTotal').textContent = '₹' + total.toFixed(0);
+    }
+  }
+
+  // ── Reserve Seats ───────────────────────────────────────────────────────────
+  async function reserveSeats() {
+    const ids = Object.keys(selectedSeats);
+    if (ids.length === 0) return;
+
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', CSRF_TOKEN);
+    ids.forEach(id => formData.append('seat_ids[]', id));
+
+    const btn = document.getElementById('reserveBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Reserving...';
+
+    try {
+      const resp = await fetch(RESERVE_URL, { method: 'POST', body: formData });
+      const data = await resp.json();
+
+      if (data.success) {
+        reservedSeatIds = data.seat_ids;
+        startCountdown(data.expires_at);
+
+        // Build checkout form inputs
+        const checkoutInputs = document.getElementById('checkoutSeatInputs');
+        checkoutInputs.innerHTML = data.seat_ids.map(id =>
+          `<input type="hidden" name="seat_ids[]" value="${id}">`
+        ).join('');
+
+        document.getElementById('checkoutForm').classList.remove('d-none');
+        btn.classList.add('d-none');
+      } else {
+        alert('❌ ' + data.error);
+        btn.disabled = false;
+        btn.innerHTML = '<i class="bi bi-lock-fill me-2"></i>Reserve & Pay';
+      }
+    } catch (e) {
+      alert('Network error. Please try again.');
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-lock-fill me-2"></i>Reserve & Pay';
+    }
+  }
+
+  // ── Countdown Timer ─────────────────────────────────────────────────────────
+  function startCountdown(expiresAt) {
+    const expiry = new Date(expiresAt).getTime();
+    const total = 120; // seconds
+    const section = document.getElementById('countdownSection');
+    section.classList.remove('d-none');
+
+    countdownInterval = setInterval(() => {
+      const remaining = Math.max(0, Math.floor((expiry - Date.now()) / 1000));
+      const mins = Math.floor(remaining / 60);
+      const secs = remaining % 60;
+      document.getElementById('countdownDisplay').textContent =
+        `${mins}:${secs.toString().padStart(2, '0')}`;
+      document.getElementById('countdownBar').style.width = `${(remaining / total) * 100}%`;
+
+      if (remaining === 0) {
+        clearInterval(countdownInterval);
+        alert('⏰ Reservation expired. Please select seats again.');
+        location.reload();
+      }
+    }, 1000);
+  }
+</script>
+{% endblock %}

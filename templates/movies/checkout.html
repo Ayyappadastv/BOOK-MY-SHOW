@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Checkout – BookMyShow{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+  <div class="row justify-content-center">
+    <div class="col-lg-7">
+      <div class="checkout-card">
+        <div class="checkout-header">
+          <h3><i class="bi bi-credit-card me-2"></i>Order Summary</h3>
+        </div>
+        <div class="checkout-body">
+          <!-- Movie + Show Info -->
+          <div class="checkout-movie-info">
+            <div class="d-flex gap-3 align-items-center">
+              {% if show.movie.poster %}
+              <img src="{{ show.movie.poster.url }}" alt="{{ show.movie.title }}" class="checkout-poster rounded-2">
+              {% endif %}
+              <div>
+                <h5 class="mb-1">{{ show.movie.title }}</h5>
+                <p class="text-muted mb-1">{{ show.screen.theater.name }}, {{ show.screen.theater.city }}</p>
+                <p class="text-muted mb-0"><i class="bi bi-calendar me-1"></i>{{ show.start_time|date:"D, d M Y, g:i A" }}</p>
+              </div>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- Seats -->
+          <div class="checkout-seats">
+            <h6>Seats</h6>
+            {% for seat in seats %}
+            <div class="checkout-seat-row">
+              <span><i class="bi bi-chair me-2"></i>{{ seat.row }}{{ seat.number }} ({{ seat.get_seat_type_display }})</span>
+              <span class="text-success fw-bold">₹{{ show.get_price_for_seat|floatformat:0 }}</span>
+            </div>
+            {% endfor %}
+          </div>
+
+          <hr>
+
+          <div class="d-flex justify-content-between fw-bold fs-5 mb-4">
+            <span>Total Amount</span>
+            <span class="text-success">₹{{ total|floatformat:0 }}</span>
+          </div>
+
+          <!-- Razorpay Pay Button -->
+          <button id="rzp-button" class="btn btn-success w-100 btn-lg">
+            <i class="bi bi-shield-lock-fill me-2"></i>Pay ₹{{ total|floatformat:0 }} Securely
+          </button>
+          <p class="text-center text-muted small mt-2">
+            <i class="bi bi-lock-fill me-1"></i>Secured by Razorpay
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Hidden form for server-side payment verification -->
+<form id="paymentCallbackForm" method="POST" action="{% url 'movies:verify_payment' %}">
+  {% csrf_token %}
+  <input type="hidden" id="razorpay_payment_id" name="razorpay_payment_id">
+  <input type="hidden" id="razorpay_order_id" name="razorpay_order_id">
+  <input type="hidden" id="razorpay_signature" name="razorpay_signature">
+</form>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<script>
+  const options = {
+    key: '{{ razorpay_key_id }}',
+    amount: {{ total|floatformat:0 }}00,
+    currency: 'INR',
+    name: 'BookMyShow',
+    description: '{{ show.movie.title }} – Ticket Booking',
+    order_id: '{{ razorpay_order_id }}',
+    prefill: {
+      name: '{{ request.user.get_full_name|default:request.user.username }}',
+      email: '{{ request.user.email }}',
+      contact: '{{ request.user.phone }}'
+    },
+    theme: { color: '#6366f1' },
+    handler: function(response) {
+      document.getElementById('razorpay_payment_id').value = response.razorpay_payment_id;
+      document.getElementById('razorpay_order_id').value = response.razorpay_order_id;
+      document.getElementById('razorpay_signature').value = response.razorpay_signature;
+      document.getElementById('paymentCallbackForm').submit();
+    },
+    modal: {
+      ondismiss: function() {
+        console.log('Payment cancelled by user');
+      }
+    }
+  };
+  document.getElementById('rzp-button').addEventListener('click', () => {
+    const rzp = new Razorpay(options);
+    rzp.on('payment.failed', function(resp) {
+      alert('Payment failed: ' + resp.error.description);
+    });
+    rzp.open();
+  });
+</script>
+{% endblock %}

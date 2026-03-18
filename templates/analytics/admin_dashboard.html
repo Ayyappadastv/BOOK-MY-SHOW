@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Admin Analytics Dashboard – BookMyShow{% endblock %}
+
+{% block extra_css %}
+<style>
+  .kpi-card { background: linear-gradient(135deg, #1e1e2e, #2a2a3e); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1.5rem; }
+  .kpi-value { font-size: 2rem; font-weight: 800; color: #a5f3fc; }
+  .kpi-label { color: #94a3b8; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; }
+  .kpi-icon { font-size: 2.5rem; opacity: 0.6; }
+  .chart-card { background: #1e1e2e; border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 1.5rem; }
+  .table-dark { --bs-table-bg: transparent; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-4">
+  <div class="d-flex align-items-center justify-content-between mb-5">
+    <div>
+      <h2 class="fw-bold mb-1"><i class="bi bi-bar-chart-fill me-2 text-primary"></i>Admin Analytics Dashboard</h2>
+      <p class="text-muted mb-0">Real-time insights · Cached for 5 minutes · DB-aggregated</p>
+    </div>
+    <span class="badge bg-success fs-6"><i class="bi bi-shield-check me-1"></i>Admin Only</span>
+  </div>
+
+  <!-- KPI Cards -->
+  <div class="row g-4 mb-5">
+    <div class="col-sm-6 col-xl-3">
+      <div class="kpi-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="kpi-label">Today's Revenue</p>
+            <p class="kpi-value">₹{{ data.revenue_daily|floatformat:0 }}</p>
+          </div>
+          <span class="kpi-icon">📅</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="kpi-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="kpi-label">Weekly Revenue</p>
+            <p class="kpi-value">₹{{ data.revenue_weekly|floatformat:0 }}</p>
+          </div>
+          <span class="kpi-icon">📊</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="kpi-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="kpi-label">Monthly Revenue</p>
+            <p class="kpi-value">₹{{ data.revenue_monthly|floatformat:0 }}</p>
+          </div>
+          <span class="kpi-icon">💰</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="kpi-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="kpi-label">All-Time Revenue</p>
+            <p class="kpi-value">₹{{ data.total_revenue_all_time|floatformat:0 }}</p>
+          </div>
+          <span class="kpi-icon">🏆</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="kpi-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="kpi-label">Total Confirmed Bookings</p>
+            <p class="kpi-value">{{ data.total_bookings_confirmed }}</p>
+          </div>
+          <span class="kpi-icon">🎟️</span>
+        </div>
+      </div>
+    </div>
+    <div class="col-sm-6 col-xl-3">
+      <div class="kpi-card">
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <p class="kpi-label">Cancellation Rate (30d)</p>
+            <p class="kpi-value">{{ data.cancellation_rate }}%</p>
+          </div>
+          <span class="kpi-icon">❌</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Charts Row -->
+  <div class="row g-4 mb-5">
+    <!-- Revenue Trend -->
+    <div class="col-lg-8">
+      <div class="chart-card">
+        <h5 class="mb-3">Revenue Trend (Last 7 Days)</h5>
+        <canvas id="revenueChart" height="100"></canvas>
+      </div>
+    </div>
+    <!-- Peak Hours -->
+    <div class="col-lg-4">
+      <div class="chart-card">
+        <h5 class="mb-3">Peak Booking Hours</h5>
+        <canvas id="hoursChart" height="200"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tables Row -->
+  <div class="row g-4">
+    <!-- Top Movies -->
+    <div class="col-lg-6">
+      <div class="chart-card">
+        <h5 class="mb-3"><i class="bi bi-fire me-2 text-danger"></i>Top 10 Movies by Bookings</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover align-middle">
+            <thead><tr><th>#</th><th>Movie</th><th>Bookings</th><th>Revenue</th></tr></thead>
+            <tbody>
+              {% for m in data.top_movies %}
+              <tr>
+                <td><span class="badge bg-primary">{{ forloop.counter }}</span></td>
+                <td>{{ m.title }}</td>
+                <td><span class="badge bg-success">{{ m.booking_count }}</span></td>
+                <td>₹{{ m.revenue|floatformat:0 }}</td>
+              </tr>
+              {% empty %}<tr><td colspan="4" class="text-muted text-center">No data yet</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Busiest Theaters -->
+    <div class="col-lg-6">
+      <div class="chart-card">
+        <h5 class="mb-3"><i class="bi bi-building me-2 text-info"></i>Busiest Theaters</h5>
+        <div class="table-responsive">
+          <table class="table table-dark table-hover align-middle">
+            <thead><tr><th>#</th><th>Theater</th><th>City</th><th>Bookings</th><th>Revenue</th></tr></thead>
+            <tbody>
+              {% for t in data.busiest_theaters %}
+              <tr>
+                <td><span class="badge bg-info text-dark">{{ forloop.counter }}</span></td>
+                <td>{{ t.name }}</td>
+                <td>{{ t.city }}</td>
+                <td><span class="badge bg-success">{{ t.booking_count }}</span></td>
+                <td>₹{{ t.revenue|floatformat:0 }}</td>
+              </tr>
+              {% empty %}<tr><td colspan="5" class="text-muted text-center">No data yet</td></tr>{% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  Chart.defaults.color = '#94a3b8';
+  Chart.defaults.borderColor = 'rgba(255,255,255,0.06)';
+
+  // Revenue Trend
+  const revData = {{ data.revenue_trend|safe }};
+  new Chart(document.getElementById('revenueChart'), {
+    type: 'line',
+    data: {
+      labels: revData.map(r => r.day),
+      datasets: [{
+        label: 'Revenue (₹)',
+        data: revData.map(r => r.total),
+        borderColor: '#6366f1',
+        backgroundColor: 'rgba(99,102,241,0.15)',
+        fill: true,
+        tension: 0.4,
+        pointBackgroundColor: '#6366f1',
+      }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+
+  // Peak Hours
+  const hoursData = {{ data.peak_hours|safe }};
+  new Chart(document.getElementById('hoursChart'), {
+    type: 'bar',
+    data: {
+      labels: hoursData.map(h => h.hour),
+      datasets: [{
+        label: 'Bookings',
+        data: hoursData.map(h => h.count),
+        backgroundColor: 'rgba(245,158,11,0.7)',
+        borderRadius: 6,
+      }]
+    },
+    options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } }
+  });
+</script>
+{% endblock %}

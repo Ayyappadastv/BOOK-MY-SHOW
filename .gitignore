@@ -1,0 +1,20 @@
+# Django
+*.pyc
+*~
+__pycache__/
+db.sqlite3
+.env
+logs/
+media/
+tmp/
+staticfiles/
+*.log
+.DS_Store
+.vscode/
+.idea/
+*.png
+*.jpg
+*.jpeg
+*.webp
+!static/img/
+!media/posters/
